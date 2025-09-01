@@ -3,25 +3,185 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    @apply transition-colors duration-200;
+  }
+  
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200;
+  }
+
+  /* Theme color variables */
+  :root {
+    --rc-primary: #2595eb; /* blue-600 */
+    --rc-primary-hover: #1d97d8; /* blue-700 */
+    --rc-primary-contrast: #ffffff;
+
+    --rc-secondary: #e5e7eb; /* gray-200 */
+    --rc-secondary-hover: #d1d5db; /* gray-300 */
+    --rc-secondary-text: #111827; /* gray-900 */
+
+    --rc-danger: #dc2626; /* red-600 */
+    --rc-danger-hover: #b91c1c; /* red-700 */
+
+    --rc-success: #16a34a; /* green-600 */
+    --rc-success-hover: #15803d; /* green-700 */
+  }
+
+  .dark {
+    --rc-primary: #3bc1f6; /* blue-500 */
+    --rc-primary-hover: #25a9eb; /* blue-600 */
+    --rc-primary-contrast: #ffffff;
+
+    --rc-secondary: #25343f; /* gray-700 */
+    --rc-secondary-hover: #2b2c2c; /* gray-600 */
+    --rc-secondary-text: #e5e7eb; /* gray-200 */
+
+    --rc-danger: #ef4444; /* red-500 */
+    --rc-danger-hover: #dc2626; /* red-600 */
+
+    --rc-success: #22c55e; /* green-500 */
+    --rc-success-hover: #16a34a; /* green-600 */
+  }
+  
+  /* Smooth transitions for theme changes */
+  * {
+    @apply transition-colors duration-200;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
+    background-color: var(--rc-primary);
+    color: var(--rc-primary-contrast);
+  }
+  .btn-primary:hover {
+    background-color: var(--rc-primary-hover);
   }
   
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+    @apply font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
+    background-color: var(--rc-secondary);
+    color: var(--rc-secondary-text);
+  }
+  .btn-secondary:hover {
+    background-color: var(--rc-secondary-hover);
+  }
+  
+  .btn-danger {
+    @apply font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-white;
+    background-color: var(--rc-danger);
+  }
+  .btn-danger:hover {
+    background-color: var(--rc-danger-hover);
+  }
+  
+  .btn-success {
+    @apply font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-white;
+    background-color: var(--rc-success);
+  }
+  .btn-success:hover {
+    background-color: var(--rc-success-hover);
   }
   
   .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200;
+  }
+  
+  .input-field:focus {
+    @apply shadow-md;
+    box-shadow: 0 0 0 2px var(--rc-primary);
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-md p-6;
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-900/20 p-6 border border-gray-200 dark:border-gray-700 transition-all duration-200;
+  }
+  
+  .card:hover {
+    @apply shadow-lg dark:shadow-gray-900/30;
+  }
+  
+  .nav-link {
+    @apply text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200;
+  }
+  
+  .nav-link.active {
+    @apply font-medium;
+    color: var(--rc-primary);
+  }
+  
+  .table {
+    @apply w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/20 overflow-hidden;
+  }
+  
+  .table th {
+    @apply bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-medium px-6 py-3 text-left;
+  }
+  
+  .table td {
+    @apply px-6 py-4 border-t border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100;
+  }
+  
+  .table tr:hover {
+    @apply bg-gray-50 dark:bg-gray-700;
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-primary {
+    background-color: color-mix(in srgb, var(--rc-primary) 15%, white);
+    color: var(--rc-primary);
+  }
+  
+  .badge-success {
+    @apply bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200;
+  }
+  
+  .badge-warning {
+    @apply bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200;
+  }
+  
+  .badge-danger {
+    @apply bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200;
+  }
+  
+  .badge-gray {
+    @apply bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200;
+  }
+  
+  /* Loading spinner */
+  .loading-spinner {
+    @apply animate-spin rounded-full h-6 w-6 border-b-2;
+    border-color: var(--rc-primary);
+  }
+  
+  /* Toast customization */
+  .toast {
+    @apply rounded-lg shadow-lg border border-gray-200 dark:border-gray-700;
+  }
+  
+  /* Modal backdrop */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 backdrop-blur-sm;
+  }
+  
+  /* Form elements */
+  .form-group {
+    @apply mb-4;
+  }
+  
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
+  }
+  
+  .form-error {
+    @apply text-red-600 dark:text-red-400 text-sm mt-1;
+  }
+  
+  .form-help {
+    @apply text-gray-500 dark:text-gray-400 text-sm mt-1;
   }
 }

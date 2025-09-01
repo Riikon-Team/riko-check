@@ -72,7 +72,7 @@ RikoCheck/
 
 ### 1. Clone repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/Riikon-Team/riko-check.git
 cd RikoCheck
 ```
 
@@ -81,7 +81,7 @@ cd RikoCheck
 npm install
 ```
 
-### 3. Cấu hình môi trường
+### 3.1 Cấu hình môi trường
 Tạo file `.env` từ `.env.example`:
 ```bash
 # Database
@@ -92,7 +92,6 @@ DB_PASSWORD=your_db_password
 DB_PORT=5432
 
 # Firebase
-FIREBASE_CONFIG={"type":"service_account",...}
 VITE_FIREBASE_API_KEY=your_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your_project_id
@@ -104,6 +103,10 @@ VITE_FIREBASE_APP_ID=your_app_id
 PORT=5000
 NODE_ENV=development
 ```
+
+### 3.2 Cấu hình firebase config
+
+Truy cập Firebase và tải privateKey và đặt vào `server\serviceAccountKey.json`
 
 ### 4. Setup database
 ```bash
@@ -210,8 +213,8 @@ Dự án này được cấp phép theo MIT License - xem file [LICENSE](LICENSE
 
 ## 📞 Liên hệ
 
-- **Email**: [your-email@example.com]
-- **Project Link**: [https://github.com/username/RikoCheck]
+- **Email**: [riikon04@gmail.com]
+- **Project Link**: [https://github.com/Riikon-Team/riko-check.git]
 
 ## 🙏 Cảm ơn
 

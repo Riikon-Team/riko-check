@@ -1,15 +1,16 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useEvent } from '../contexts/EventContext'
 import toast from 'react-hot-toast'
 import IPAllowList from '../components/IPAllowList'
 import CustomFields from '../components/CustomFields'
 import { externalAPI } from '../utils/apiUtils'
 
-function EventCreate() {
+function EventEdit() {
   const navigate = useNavigate()
-  const { createEvent } = useEvent()
-
+  const { id } = useParams()
+  const { getEventById, updateEvent } = useEvent()
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -23,9 +24,44 @@ function EventCreate() {
     customFields: [],
     isPublic: false
   })
-
+  
   const [loading, setLoading] = useState(false)
   const [gettingIP, setGettingIP] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
+
+  useEffect(() => {
+    const loadEvent = async () => {
+      try {
+        const event = await getEventById(id)
+        if (event) {
+          setFormData({
+            name: event.name,
+            description: event.description || '',
+            types: event.types || [],
+            requiresAuth: event.requires_auth || false,
+            ipAllowList: event.ip_allow_list || [],
+            allowedEmailDomains: event.allowed_email_domains || [],
+            startAt: event.start_at ? new Date(event.start_at).toISOString().slice(0, 16) : '',
+            endAt: event.end_at ? new Date(event.end_at).toISOString().slice(0, 16) : '',
+            nonceTtl: event.nonce_ttl || 300,
+            customFields: event.custom_fields || [],
+            isPublic: event.is_public || false
+          })
+        } else {
+          toast.error('Không tìm thấy sự kiện')
+          navigate('/dashboard')
+        }
+      } catch (error) {
+        console.error('Error loading event:', error)
+        toast.error('Lỗi tải thông tin sự kiện')
+        navigate('/dashboard')
+      } finally {
+        setInitialLoading(false)
+      }
+    }
+
+    loadEvent()
+  }, [id, getEventById, navigate])
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -40,7 +76,7 @@ function EventCreate() {
     try {
       const data = await externalAPI.getIP()
       const currentIP = data.ip
-
+      
       // Thêm IP vào danh sách nếu chưa có
       if (!formData.ipAllowList.includes(currentIP)) {
         setFormData(prev => ({
@@ -61,7 +97,7 @@ function EventCreate() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
+    
     if (!formData.name || !formData.startAt || !formData.endAt) {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc')
       return
@@ -73,7 +109,7 @@ function EventCreate() {
     }
 
     setLoading(true)
-
+    
     try {
       const eventData = {
         ...formData,
@@ -81,26 +117,34 @@ function EventCreate() {
         endAt: new Date(formData.endAt).toISOString()
       }
 
-      const newEvent = await createEvent(eventData)
-      if (newEvent) {
-        toast.success('Tạo sự kiện thành công!')
+      const updatedEvent = await updateEvent(id, eventData)
+      if (updatedEvent) {
+        toast.success('Cập nhật sự kiện thành công!')
         navigate('/dashboard')
       }
     } catch (error) {
-      console.error('Error creating event:', error)
+      console.error('Error updating event:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  if (initialLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    )
   }
 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold  mb-2">
-          Tạo sự kiện mới
+          Chỉnh sửa sự kiện
         </h1>
         <p className="">
-          Tạo sự kiện điểm danh với các tùy chọn bảo mật và cấu hình
+          Cập nhật thông tin và cài đặt cho sự kiện
         </p>
       </div>
 
@@ -108,7 +152,7 @@ function EventCreate() {
         {/* Basic Information */}
         <div>
           <h3 className="text-lg font-medium  mb-4">Thông tin cơ bản</h3>
-
+          
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -184,7 +228,7 @@ function EventCreate() {
         {/* Time Settings */}
         <div>
           <h3 className="text-lg font-medium  mb-4">Thời gian</h3>
-
+          
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="startAt" className="block text-sm font-medium text-gray-700 mb-2">
@@ -221,7 +265,7 @@ function EventCreate() {
         {/* Security Settings */}
         <div>
           <h3 className="text-lg font-medium  mb-4">Cài đặt bảo mật</h3>
-
+          
           <div className="space-y-4">
             <div className="flex items-center">
               <input
@@ -236,27 +280,6 @@ function EventCreate() {
                 Yêu cầu đăng nhập Google để điểm danh
               </label>
             </div>
-
-            {
-              formData.requiresAuth && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Domain email cho phép (tùy chọn)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.allowedEmailDomains.join(', ')}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      allowedEmailDomains: e.target.value.split(',').map(d => d.trim().toLowerCase()).filter(Boolean)
-                    }))}
-                    className="input-field"
-                    placeholder="vd: ou.edu.vn, gmail.com"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Phân cách bằng dấu phẩy. Nếu để trống sẽ không ràng buộc.</p>
-                </div>
-              )
-            }
 
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -276,6 +299,23 @@ function EventCreate() {
                 value={formData.ipAllowList}
                 onChange={(ips) => setFormData(prev => ({ ...prev, ipAllowList: ips }))}
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Domain email cho phép (tùy chọn)
+              </label>
+              <input
+                type="text"
+                value={formData.allowedEmailDomains.join(', ')}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  allowedEmailDomains: e.target.value.split(',').map(d => d.trim().toLowerCase()).filter(Boolean)
+                }))}
+                className="input-field"
+                placeholder="vd: ou.edu.vn, gmail.com"
+              />
+              <p className="text-xs text-gray-500 mt-1">Phân cách bằng dấu phẩy. Nếu để trống sẽ không ràng buộc.</p>
             </div>
 
             <div>
@@ -322,7 +362,7 @@ function EventCreate() {
             disabled={loading}
             className="btn-primary disabled:opacity-50"
           >
-            {loading ? 'Đang tạo...' : 'Tạo sự kiện'}
+            {loading ? 'Đang cập nhật...' : 'Cập nhật sự kiện'}
           </button>
         </div>
       </form>
@@ -330,4 +370,4 @@ function EventCreate() {
   )
 }
 
-export default EventCreate
+export default EventEdit

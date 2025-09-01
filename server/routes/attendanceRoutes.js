@@ -7,5 +7,6 @@ const router = express.Router();
 router.post('/:eventId', attendanceController.submitAttendance);
 router.get('/:eventId', authMiddleware, attendanceController.getAttendance);
 router.put('/:attendanceId/approve', authMiddleware, attendanceController.approveAttendance);
+router.delete('/:attendanceId', authMiddleware, attendanceController.deleteAttendance);
 
 export default router;

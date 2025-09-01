@@ -50,7 +50,7 @@ function IPAllowList({ value = [], onChange, disabled = false }) {
 
       {value.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm text-gray-600">IP được phép:</p>
+          <p className="text-sm ">IP được phép:</p>
           <div className="flex flex-wrap gap-2">
             {value.map((ip, index) => (
               <div

@@ -3,9 +3,18 @@ import { db } from '../db.js';
 export const eventController = {
   async getAllEvents(req, res) {
     try {
-      const result = await db.query(
-        'SELECT e.*, u.display_name as creator_name FROM events e JOIN users u ON e.creator_id = u.id ORDER BY e.created_at DESC'
-      );
+      const { publicOnly = false } = req.query;
+      
+      let query = 'SELECT e.*, u.display_name as creator_name FROM events e JOIN users u ON e.creator_id = u.id';
+      let params = [];
+      
+      if (publicOnly === 'true') {
+        query += ' WHERE e.is_public = true';
+      }
+      
+      query += ' ORDER BY e.created_at DESC';
+      
+      const result = await db.query(query, params);
       res.json(result.rows);
     } catch (error) {
       console.error('Error getting events:', error);
@@ -34,15 +43,15 @@ export const eventController = {
 
   async createEvent(req, res) {
     try {
-      const { name, description, types, requiresAuth, ipAllowList, startAt, endAt, nonceTtl, customFields } = req.body;
+      const { name, description, types, requiresAuth, ipAllowList, allowedEmailDomains, startAt, endAt, nonceTtl, customFields, isPublic } = req.body;
       const creatorId = req.user.uid;
       
       // Đảm bảo ipAllowList là mảng
       const ipList = Array.isArray(ipAllowList) ? ipAllowList : (ipAllowList ? [ipAllowList] : []);
       
       const result = await db.query(
-        'INSERT INTO events (creator_id, name, description, types, requires_auth, ip_allow_list, start_at, end_at, nonce_ttl, custom_fields) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
-        [creatorId, name, description, types, requiresAuth, ipList, startAt, endAt, nonceTtl || 300, customFields || {}]
+        'INSERT INTO events (creator_id, name, description, types, requires_auth, ip_allow_list, allowed_email_domains, start_at, end_at, nonce_ttl, custom_fields, is_public) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12) RETURNING *',
+        [creatorId, name, description, types, requiresAuth, ipList, allowedEmailDomains || [], startAt, endAt, nonceTtl || 300, JSON.stringify(customFields || []), isPublic || false]
       );
       
       // Tạo QR code sau khi có event ID
@@ -70,7 +79,7 @@ export const eventController = {
   async updateEvent(req, res) {
     try {
       const { id } = req.params;
-      const { name, description, types, requiresAuth, ipAllowList, startAt, endAt, nonceTtl } = req.body;
+      const { name, description, types, requiresAuth, ipAllowList, allowedEmailDomains, startAt, endAt, nonceTtl, customFields, isPublic } = req.body;
       const userId = req.user.uid;
       
       const eventResult = await db.query(
@@ -91,8 +100,8 @@ export const eventController = {
       const ipList = Array.isArray(ipAllowList) ? ipAllowList : (ipAllowList ? [ipAllowList] : []);
       
       const result = await db.query(
-        'UPDATE events SET name = $1, description = $2, types = $3, requires_auth = $4, ip_allow_list = $5, start_at = $6, end_at = $7, nonce_ttl = $8, updated_at = CURRENT_TIMESTAMP WHERE id = $9 RETURNING *',
-        [name, description, types, requiresAuth, ipList, startAt, endAt, nonceTtl || 300, id]
+        'UPDATE events SET name = $1, description = $2, types = $3, requires_auth = $4, ip_allow_list = $5, allowed_email_domains = $6, start_at = $7, end_at = $8, nonce_ttl = $9, custom_fields = $10::jsonb, is_public = $11, updated_at = CURRENT_TIMESTAMP WHERE id = $12 RETURNING *',
+        [name, description, types, requiresAuth, ipList, allowedEmailDomains || [], startAt, endAt, nonceTtl || 300, JSON.stringify(customFields || []), isPublic || false, id]
       );
       
       res.json(result.rows[0]);
@@ -121,7 +130,12 @@ export const eventController = {
         return res.status(403).json({ message: 'Không có quyền xóa sự kiện này' });
       }
       
+      // Xóa attendances trước (do foreign key constraint)
+      await db.query('DELETE FROM attendances WHERE event_id = $1', [id]);
+      
+      // Sau đó xóa event
       await db.query('DELETE FROM events WHERE id = $1', [id]);
+      
       res.json({ message: 'Xóa sự kiện thành công' });
     } catch (error) {
       console.error('Error deleting event:', error);

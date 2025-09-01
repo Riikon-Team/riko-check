@@ -1,12 +1,21 @@
 import { db } from '../db.js';
 import { getClientIp, ipInRanges } from '../utils.js';
+import crypto from 'crypto';
 
 export const attendanceController = {
   async submitAttendance(req, res) {
     try {
       const { eventId } = req.params;
-      const { userId, uaHash, nonce, customData } = req.body;
+      const { userId, customData, email, displayName, publicIp: bodyPublicIp, userAgent: bodyUserAgent } = req.body;
       const clientIp = getClientIp(req);
+      const userAgent = bodyUserAgent || req.headers['user-agent'] || '';
+      
+      // Lấy public IP từ request body hoặc headers
+      const publicIp = bodyPublicIp || req.headers['x-forwarded-for'] || clientIp;
+      
+      // Tạo ua_hash từ userAgent và clientIp
+      const uaHash = crypto.createHash('sha256').update(userAgent + clientIp).digest('hex');
+      const nonce = crypto.randomBytes(16).toString('hex');
       
       const eventResult = await db.query(
         'SELECT * FROM events WHERE id = $1 AND start_at <= CURRENT_TIMESTAMP AND end_at >= CURRENT_TIMESTAMP',
@@ -20,39 +29,105 @@ export const attendanceController = {
       const event = eventResult.rows[0];
 
       console.log('Client IP:', clientIp);
+      console.log('Public IP:', publicIp);
       console.log('Event IP Allow List:', event.ip_allow_list);
 
-      // Kiểm tra IP và quyết định status (optional)
-      let status = 'approved';
-      if (event.ip_allow_list && event.ip_allow_list.length > 0) {
-        // Nếu có IP allow list, kiểm tra xem IP hiện tại có trong danh sách không
-        const isIpAllowed = event.ip_allow_list.includes(clientIp) || ipInRanges(clientIp, event.ip_allow_list);
-        if (!isIpAllowed) {
-          status = 'pending';
+      // Kiểm tra và quyết định trạng thái điểm danh
+      let isValid = true;
+      let status = 'pending';
+      let message = 'Điểm danh đã được ghi nhận và đang chờ phê duyệt!';
+      let rejectionReason = null;
+      
+      // Bước 1: Kiểm tra domain email (nếu có cấu hình)
+      if (event.allowed_email_domains && event.allowed_email_domains.length > 0 && email) {
+        const emailDomain = String(email).split('@')[1]?.toLowerCase();
+        const isDomainAllowed = event.allowed_email_domains.map(d => String(d).toLowerCase()).includes(emailDomain);
+        
+        if (!isDomainAllowed) {
+          isValid = false;
+          status = 'rejected';
+          message = `Email không thuộc domain "${event.allowed_email_domains.join(', ')}" cho phép`;
+          rejectionReason = 'EMAIL_DOMAIN';
+          console.log('Email domain rejected:', emailDomain);
         }
       }
-      // Nếu không có IP allow list hoặc IP được cho phép -> status = 'approved'
       
+      // Bước 2: Kiểm tra IP (chỉ khi email hợp lệ hoặc không cần kiểm tra email)
+      if (isValid && event.ip_allow_list && event.ip_allow_list.length > 0) {
+        const isIpAllowed = event.ip_allow_list.includes(publicIp) || ipInRanges(publicIp, event.ip_allow_list);
+        
+        console.log('IP Check Results:');
+        console.log('- Public IP:', publicIp);
+        console.log('- Allow List:', event.ip_allow_list);
+        console.log('- Direct match:', event.ip_allow_list.includes(publicIp));
+        console.log('- Range match:', ipInRanges(publicIp, event.ip_allow_list));
+        console.log('- Final result:', isIpAllowed);
+        
+        if (!isIpAllowed) {
+          isValid = false;
+          status = 'rejected';
+          message = 'Điểm danh không hợp lệ do không nằm trong danh sách IP cho phép';
+          rejectionReason = 'IP_NOT_ALLOWED';
+          console.log('IP rejected - setting isValid = false, reason:', rejectionReason);
+        }
+      }
+      
+      // Bước 3: Quyết định status cuối cùng
+      if (isValid) {
+        // Tất cả điều kiện đều pass -> approved
+        status = 'approved';
+        message = 'Điểm danh thành công!';
+        console.log('All validations passed - setting status = approved');
+      } else {
+        // Có ít nhất 1 điều kiện fail -> rejected
+        console.log('Validation failed - final status = rejected, reason:', rejectionReason);
+      }
+      
+      // Kiểm tra điểm danh có tồn tại hay không
       const existingAttendance = await db.query(
         'SELECT * FROM attendances WHERE event_id = $1 AND (user_id = $2 OR ua_hash = $3)',
         [eventId, userId, uaHash]
       );
       
       if (existingAttendance.rows.length > 0) {
-        return res.status(400).json({ message: 'Bạn đã điểm danh cho sự kiện này' });
+        const existing = existingAttendance.rows[0];
+        
+        // Nếu điểm danh cũ đã hợp lệ (is_valid = true) -> không cho phép ghi đè
+        if (existing.is_valid) {
+          return res.status(400).json({ 
+            message: 'Bạn đã điểm danh hợp lệ cho sự kiện này',
+            existingAttendance: existing
+          });
+        }
+        
+        // Nếu điểm danh mới cũng không hợp lệ -> cho phép ghi đè nhưng thông báo
+        if (!isValid) {
+          console.log('Overwriting invalid attendance with another invalid attempt');
+          await db.query('DELETE FROM attendances WHERE id = $1', [existing.id]);
+        } 
+        // Nếu điểm danh mới hợp lệ -> ghi đè điểm danh cũ không hợp lệ
+        else {
+          console.log('Overwriting invalid attendance with valid attendance');
+          await db.query('DELETE FROM attendances WHERE id = $1', [existing.id]);
+        }
       }
       
       const result = await db.query(
-        'INSERT INTO attendances (event_id, user_id, ip, ua_hash, nonce, custom_data, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-        [eventId, userId, clientIp, uaHash, nonce, customData || {}, status]
+        `INSERT INTO attendances (
+          event_id, user_id, email, display_name, ip, public_ip, user_agent, 
+          ua_hash, nonce, custom_data, status, is_valid
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+        [
+          eventId, userId, email, displayName, clientIp, publicIp, userAgent,
+          uaHash, nonce, customData || {}, status, isValid
+        ]
       );
-      
-      const message = status === 'approved' ? 'Điểm danh thành công!' : 'Điểm danh đã được ghi nhận và đang chờ phê duyệt!';
       
       res.status(201).json({
         message,
         attendance: result.rows[0],
-        status
+        status,
+        isValid
       });
     } catch (error) {
       console.error('Error submitting attendance:', error);
@@ -80,7 +155,11 @@ export const attendanceController = {
       }
       
       const result = await db.query(
-        'SELECT a.*, u.display_name, u.email FROM attendances a LEFT JOIN users u ON a.user_id = u.id WHERE a.event_id = $1 ORDER BY a.created_at DESC',
+        `SELECT a.*, u.display_name as user_display_name, u.email as user_email 
+         FROM attendances a 
+         LEFT JOIN users u ON a.user_id = u.id 
+         WHERE a.event_id = $1 
+         ORDER BY a.created_at DESC`,
         [eventId]
       );
       
@@ -128,5 +207,34 @@ export const attendanceController = {
       console.error('Error approving attendance:', error);
       res.status(500).json({ message: 'Lỗi phê duyệt điểm danh' });
     }
+  },
+
+  async deleteAttendance(req, res) {
+    try {
+      const { attendanceId } = req.params;
+      const userId = req.user.uid;
+      
+      const attendanceResult = await db.query(
+        'SELECT a.*, e.creator_id FROM attendances a JOIN events e ON a.event_id = e.id WHERE a.id = $1',
+        [attendanceId]
+      );
+      
+      if (attendanceResult.rows.length === 0) {
+        return res.status(404).json({ message: 'Không tìm thấy điểm danh' });
+      }
+      
+      const attendance = attendanceResult.rows[0];
+      if (attendance.creator_id !== userId && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Không có quyền xóa điểm danh này' });
+      }
+      
+      await db.query('DELETE FROM attendances WHERE id = $1', [attendanceId]);
+      
+      res.json({ message: 'Đã xóa điểm danh' });
+    } catch (error) {
+      console.error('Error deleting attendance:', error);
+      res.status(500).json({ message: 'Lỗi xóa điểm danh' });
+    }
   }
 };
+

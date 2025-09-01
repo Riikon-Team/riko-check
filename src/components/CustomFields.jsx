@@ -1,26 +1,27 @@
 import React, { useState } from 'react';
 
-function CustomFields({ value = {}, onChange, disabled = false }) {
-  const [newField, setNewField] = useState({ key: '', label: '', type: 'text', required: false });
+function CustomFields({ value = [], onChange, disabled = false }) {
+  const [newField, setNewField] = useState({ title: '', label: '', type: 'text', required: false });
 
   const addField = () => {
-    if (newField.key.trim() && newField.label.trim()) {
-      const updatedFields = {
+    if (newField.title.trim() && newField.label.trim()) {
+      const updatedFields = [
         ...value,
-        [newField.key]: {
+        {
+          title: newField.title,
           label: newField.label,
           type: newField.type,
           required: newField.required
         }
-      };
+      ];
       onChange(updatedFields);
-      setNewField({ key: '', label: '', type: 'text', required: false });
+      setNewField({ title: '', label: '', type: 'text', required: false });
     }
   };
 
-  const removeField = (key) => {
-    const { [key]: removed, ...rest } = value;
-    onChange(rest);
+  const removeField = (index) => {
+    const updatedFields = value.filter((_, i) => i !== index);
+    onChange(updatedFields);
   };
 
   const handleKeyPress = (e) => {
@@ -39,10 +40,10 @@ function CustomFields({ value = {}, onChange, disabled = false }) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
         <input
           type="text"
-          value={newField.key}
-          onChange={(e) => setNewField({ ...newField, key: e.target.value })}
+          value={newField.title}
+          onChange={(e) => setNewField({ ...newField, title: e.target.value })}
           onKeyPress={handleKeyPress}
-          placeholder="Tên trường (ví dụ: mssv)"
+          placeholder="Tiêu đề (ví dụ: Họ tên)"
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={disabled}
         />
@@ -51,7 +52,7 @@ function CustomFields({ value = {}, onChange, disabled = false }) {
           value={newField.label}
           onChange={(e) => setNewField({ ...newField, label: e.target.value })}
           onKeyPress={handleKeyPress}
-          placeholder="Nhãn hiển thị (ví dụ: MSSV)"
+          placeholder="Tên trường (ví dụ: fullname)"
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={disabled}
         />
@@ -82,31 +83,31 @@ function CustomFields({ value = {}, onChange, disabled = false }) {
       <button
         type="button"
         onClick={addField}
-        disabled={disabled || !newField.key.trim() || !newField.label.trim()}
+        disabled={disabled || !newField.title.trim() || !newField.label.trim()}
         className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Thêm trường
       </button>
 
-      {Object.keys(value).length > 0 && (
+      {value.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm text-gray-600">Trường đã thêm:</p>
+          <p className="text-sm ">Trường đã thêm:</p>
           <div className="space-y-2">
-            {Object.entries(value).map(([key, field]) => (
+            {value.map((field, index) => (
               <div
-                key={key}
+                key={index}
                 className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md"
               >
                 <div className="flex-1">
-                  <span className="font-medium text-sm">{field.label}</span>
-                  <span className="text-xs text-gray-500 ml-2">({field.type})</span>
+                  <span className="font-medium text-sm">{field.title}</span>
+                  <span className="text-xs text-gray-500 ml-2">({field.label}, {field.type})</span>
                   {field.required && (
                     <span className="text-xs text-red-600 ml-2">*</span>
                   )}
                 </div>
                 <button
                   type="button"
-                  onClick={() => removeField(key)}
+                  onClick={() => removeField(index)}
                   disabled={disabled}
                   className="text-red-600 hover:text-red-800 disabled:opacity-50"
                 >
