@@ -88,14 +88,20 @@ export const attendanceController = {
         'SELECT * FROM attendances WHERE event_id = $1 AND (user_id = $2 OR ua_hash = $3)',
         [eventId, userId, uaHash]
       );
-      
+
       if (existingAttendance.rows.length > 0) {
         const existing = existingAttendance.rows[0];
-        
+
+        let existing_message = 'Bạn đã điểm danh hợp lệ cho sự kiện này';
+
+        if (existing.ua_hash === uaHash) {
+          existing_message = 'Thiết bị này đã được điểm danh trước đó. Hãy dùng thiết bị khác để điểm danh';
+        }
+
         // Nếu điểm danh cũ đã hợp lệ (is_valid = true) -> không cho phép ghi đè
         if (existing.is_valid) {
           return res.status(400).json({ 
-            message: 'Bạn đã điểm danh hợp lệ cho sự kiện này',
+            message: existing_message,
             existingAttendance: existing
           });
         }
