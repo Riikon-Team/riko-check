@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { eventsAPI, attendanceAPI } from '../utils/apiUtils'
 import toast from 'react-hot-toast'
 import { formatDateTimeShort } from '../utils/dateUtils'
+import { createSecureFingerprint } from '../utils/fingerprint'
 
 function Attendance() {
   const { eventId } = useParams()
@@ -15,11 +16,26 @@ function Attendance() {
   const [submitting, setSubmitting] = useState(false)
   const [customData, setCustomData] = useState({})
   const [publicIp, setPublicIp] = useState('')
+  const [fingerprint, setFingerprint] = useState('')
+  const [fingerprintHash, setFingerprintHash] = useState('')
 
   useEffect(() => {
     fetchEvent()
     fetchPublicIP()
+    generateFingerprint()
   }, [eventId])
+
+  const generateFingerprint = () => {
+    try {
+      const secretKey = import.meta.env.VITE_SECRET_KEY || 'default_secret_key'
+      const secureFingerprint = createSecureFingerprint(secretKey)
+      setFingerprint(secureFingerprint.fingerprint)
+      setFingerprintHash(secureFingerprint.hash)
+    } catch (error) {
+      console.error('Error generating fingerprint:', error)
+      toast.error('Không thể tạo fingerprint bảo mật')
+    }
+  }
 
   const fetchEvent = async () => {
     try {
@@ -88,7 +104,9 @@ function Attendance() {
         displayName: currentUser?.displayName || null,
         publicIp: publicIp,
         userAgent: navigator.userAgent,
-        customData: customData
+        customData: customData,
+        fingerprint: fingerprint,
+        fingerprintHash: fingerprintHash
       }
 
       const response = await attendanceAPI.submit(eventId, attendanceData)

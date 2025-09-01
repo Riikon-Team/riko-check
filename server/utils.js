@@ -1,4 +1,5 @@
 import ipaddr from "ipaddr.js";
+import crypto from 'crypto';
 
 
 export function getClientIp(req) {
@@ -44,4 +45,33 @@ export function ipInRanges(ip, allowedIPs) {
     
     return false;
   });
+}
+
+// Validate fingerprint từ frontend
+export function validateFingerprint(fingerprint, hash, secretKey) {
+  try {
+    // Tạo hash từ fingerprint với secret key
+    const expectedHash = crypto
+      .createHmac('sha256', secretKey)
+      .update(JSON.stringify(fingerprint))
+      .digest('hex');
+    
+    return expectedHash === hash;
+  } catch (error) {
+    console.error('Error validating fingerprint:', error);
+    return false;
+  }
+}
+
+// Tạo hash từ fingerprint
+export function hashFingerprint(fingerprint, secretKey) {
+  try {
+    return crypto
+      .createHmac('sha256', secretKey)
+      .update(JSON.stringify(fingerprint))
+      .digest('hex');
+  } catch (error) {
+    console.error('Error hashing fingerprint:', error);
+    return null;
+  }
 }
