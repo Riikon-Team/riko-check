@@ -67,6 +67,10 @@ export function EventProvider({ children }) {
       return await eventsAPI.getById(id)
     } catch (error) {
       console.error('Error fetching event:', error)
+      // Nếu lỗi authentication, trả về null để component xử lý
+      if (error.message === 'Unauthorized') {
+        return null
+      }
       return null
     }
   }

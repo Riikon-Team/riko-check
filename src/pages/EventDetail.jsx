@@ -28,10 +28,22 @@ function EventDetail() {
   const fetchEvent = async () => {
     try {
       const eventData = await eventsAPI.getById(eventId)
-      setEvent(eventData)
+      if (eventData) {
+        setEvent(eventData)
+      } else {
+        // Nếu không lấy được event data (có thể do lỗi auth)
+        toast.error('Không thể tải thông tin sự kiện. Vui lòng đăng nhập lại.')
+        navigate('/')
+      }
     } catch (error) {
       console.error('Error fetching event:', error)
-      navigate('/')
+      if (error.message === 'Unauthorized') {
+        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+        navigate('/')
+      } else {
+        toast.error('Có lỗi xảy ra khi tải thông tin sự kiện')
+        navigate('/')
+      }
     } finally {
       setLoading(false)
     }

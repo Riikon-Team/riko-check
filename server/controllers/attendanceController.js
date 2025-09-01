@@ -137,7 +137,7 @@ export const attendanceController = {
           `INSERT INTO attendances (
             event_id, user_id, email, display_name, ip, public_ip, fingerprint_hash, 
             nonce, custom_data, status, is_valid, user_agent
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
           [
             eventId, userId, email, displayName, clientIp, publicIp, fingerprintHashForDB,
             nonce, customData || {}, status, isValid, userAgent
@@ -265,7 +265,7 @@ export const attendanceController = {
           `INSERT INTO attendances (
             event_id, user_id, email, display_name, ip, public_ip, ua_hash, 
             nonce, custom_data, status, is_valid, user_agent
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
           [
             eventId, userId, email, displayName, clientIp, publicIp, uaHash,
             nonce, customData || {}, status, isValid, userAgent 
@@ -331,7 +331,7 @@ export const attendanceController = {
       }
       
       const attendanceResult = await db.query(
-        'SELECT a.*, e.creator_id FROM attendances a JOIN events e ON a.event_id = e.id WHERE a.id = $1',
+        'SELECT a.*, e.creator_id as event_creator_id FROM attendances a JOIN events e ON a.event_id = e.id WHERE a.id = $1',
         [attendanceId]
       );
       
@@ -340,7 +340,7 @@ export const attendanceController = {
       }
       
       const attendance = attendanceResult.rows[0];
-      if (attendance.creator_id !== userId && req.user.role !== 'admin') {
+      if (attendance.event_creator_id !== userId && req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Không có quyền phê duyệt điểm danh này' });
       }
       
@@ -365,7 +365,7 @@ export const attendanceController = {
       const userId = req.user.uid;
       
       const attendanceResult = await db.query(
-        'SELECT a.*, e.creator_id FROM attendances a JOIN events e ON a.event_id = e.id WHERE a.id = $1',
+        'SELECT a.*, e.creator_id as event_creator_id FROM attendances a JOIN events e ON a.event_id = e.id WHERE a.id = $1',
         [attendanceId]
       );
       
@@ -374,7 +374,7 @@ export const attendanceController = {
       }
       
       const attendance = attendanceResult.rows[0];
-      if (attendance.creator_id !== userId && req.user.role !== 'admin') {
+      if (attendance.event_creator_id !== userId && req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Không có quyền xóa điểm danh này' });
       }
       

@@ -202,6 +202,43 @@ function getFontsFingerprint() {
   return detectedFonts;
 }
 
+// Thu thập thông tin Hardware (cố định theo thiết bị)
+function getHardwareFingerprint() {
+  return {
+    // CPU cores
+    cores: navigator.hardwareConcurrency,
+    
+    // Memory
+    memory: navigator.deviceMemory,
+    
+    // Touch support
+    touchSupport: navigator.maxTouchPoints,
+    
+    // Battery (nếu có)
+    battery: navigator.getBattery ? 'supported' : 'not_supported',
+    
+    // Connection (chỉ giữ type cố định)
+    connection: navigator.connection ? {
+      effectiveType: navigator.connection.effectiveType,
+      downlink: navigator.connection.downlink,
+      rtt: navigator.connection.rtt
+    } : null
+  };
+}
+
+// Thu thập thông tin Browser (chỉ giữ phần cố định)
+function getBrowserFingerprint() {
+  return {
+    // Chỉ giữ các thuộc tính cố định
+    cookieEnabled: navigator.cookieEnabled,
+    onLine: navigator.onLine,
+    javaEnabled: navigator.javaEnabled ? navigator.javaEnabled() : false,
+    
+    // Bỏ các thuộc tính có thể thay đổi
+    // userAgent, appVersion, appName, appCodeName
+  };
+}
+
 // Tạo fingerprint hoàn chỉnh (chỉ giữ thuộc tính cố định)
 export function generateFingerprint() {
   const fingerprint = {
@@ -212,8 +249,11 @@ export function generateFingerprint() {
     platform: getPlatformFingerprint(),
     screen: getScreenFingerprint(),
     timezone: getTimezoneFingerprint(),
-    fonts: getFontsFingerprint()
+    fonts: getFontsFingerprint(),
+    hardware: getHardwareFingerprint(),
+    browser: getBrowserFingerprint()
     // Bỏ timestamp và random vì thay đổi mỗi lần
+    // Bỏ các thuộc tính liên quan đến session, cache, storage
   };
   
   return fingerprint;
@@ -251,4 +291,25 @@ export function createSecureFingerprint(secretKey) {
 export function validateFingerprint(fingerprint, hash, secretKey) {
   const expectedHash = hashFingerprint(fingerprint, secretKey);
   return expectedHash === hash;
+}
+
+// Tạo fingerprint ổn định (loại bỏ các yếu tố có thể thay đổi)
+export function generateStableFingerprint() {
+  const fingerprint = generateFingerprint();
+  
+  // Loại bỏ các thuộc tính có thể thay đổi giữa các session
+  const stableFingerprint = {
+    webgl: fingerprint.webgl,
+    canvas: fingerprint.canvas,
+    audio: fingerprint.audio,
+    clientRects: fingerprint.clientRects,
+    platform: fingerprint.platform,
+    screen: fingerprint.screen,
+    timezone: fingerprint.timezone,
+    fonts: fingerprint.fonts,
+    hardware: fingerprint.hardware,
+    browser: fingerprint.browser
+  };
+  
+  return stableFingerprint;
 }

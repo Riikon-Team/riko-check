@@ -5,8 +5,10 @@ import toast from 'react-hot-toast'
 import IPAllowList from '../components/IPAllowList'
 import CustomFields from '../components/CustomFields'
 import { externalAPI } from '../utils/apiUtils'
+import { useAuth } from '../contexts/AuthContext'
 
 function EventCreate() {
+  const { canCreateEvents } = useAuth()
   const navigate = useNavigate()
   const { createEvent } = useEvent()
 
@@ -34,6 +36,13 @@ function EventCreate() {
       [name]: type === 'checkbox' ? checked : value
     }))
   }
+
+  useEffect(() => {
+    if (!canCreateEvents) {
+      toast.error('Bạn không có quyền tạo sự kiện')
+      navigate('/dashboard')
+    }
+  }, [])
 
   const getPublicIP = async () => {
     setGettingIP(true)

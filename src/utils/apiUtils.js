@@ -153,7 +153,11 @@ export const adminAPI = {
   approveUser: (userId) => api.post(`/admin/users/${userId}/approve`),
   changeUserRole: (userId, role) => api.put(`/admin/users/${userId}/role`, { role }),
   getStats: () => api.get('/admin/stats'),
-  requestPermission: (requestData) => api.post('/admin/request-permission', requestData)
+  requestPermission: (requestData) => api.post('/admin/request-permission', requestData),
+  // Event management
+  getEvents: () => api.get('/admin/events'),
+  deleteEvent: (eventId) => api.delete(`/admin/events/${eventId}`),
+  getEventStats: (eventId) => api.get(`/admin/events/${eventId}/stats`)
 }
 
 // External API calls (không cần authentication)
