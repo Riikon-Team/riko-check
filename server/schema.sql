@@ -36,20 +36,21 @@ CREATE TABLE IF NOT EXISTS attendances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID NOT NULL REFERENCES events(id),
     user_id VARCHAR(255) REFERENCES users(id),
-    email VARCHAR(255),                    -- Email người điểm danh
-    display_name VARCHAR(255),              -- Tên hiển thị
-    ip VARCHAR(45) NOT NULL,               -- IP client
-    public_ip VARCHAR(45),                 -- IP public
-    user_agent TEXT,                       -- User agent của browser
-    ua_hash TEXT NOT NULL,
+    email VARCHAR(255),                    
+    display_name VARCHAR(255),              
+    ip VARCHAR(45) NOT NULL,               
+    public_ip VARCHAR(45),                 
+    user_agent TEXT,                       
+    ua_hash TEXT,                          
+    fingerprint_hash TEXT,                 
     at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     nonce VARCHAR(255),
-    custom_data JSONB DEFAULT '{}',        -- Dữ liệu tùy chỉnh (MSSV, etc.)
+    custom_data JSONB DEFAULT '{}',        
     status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-    is_valid BOOLEAN DEFAULT TRUE,        -- Trạng thái hợp lệ dựa trên IP
+    is_valid BOOLEAN DEFAULT TRUE,       
     approved_by VARCHAR(255) REFERENCES users(id),
     approved_at TIMESTAMP WITH TIME ZONE,
-    notes TEXT,                            -- Ghi chú khi phê duyệt/từ chối
+    notes TEXT,                            
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
