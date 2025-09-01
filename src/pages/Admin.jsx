@@ -150,7 +150,7 @@ function Admin() {
                   Vai trò
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Trạng thái
+                  Được quyền tạo sự kiện
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Ngày tạo
@@ -186,9 +186,9 @@ function Admin() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.is_approved ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                      user.can_create_events ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                     }`}>
-                      {user.is_approved ? 'Đã phê duyệt' : 'Chờ phê duyệt'}
+                      {user.can_create_events ? 'Đã phê duyệt' : 'Chờ phê duyệt'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
@@ -201,7 +201,7 @@ function Admin() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <ActionMenu
                       actions={[
-                        ...(!user.is_approved ? [{
+                        ...(!user.can_create_events ? [{
                           label: 'Phê duyệt',
                           icon: (
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
