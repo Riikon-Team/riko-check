@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { auth } from '../firebase/config'
 import { 
-  signInWithPopup, 
+  signInWithPopup,
   GoogleAuthProvider, 
   signOut, 
   onAuthStateChanged 
@@ -30,15 +30,10 @@ export function AuthProvider({ children }) {
 
   async function signInWithGoogle() {
     try {
-      console.log('Attempting Google sign-in...');
+      console.log('Attempting Google sign-in with popup...');
       const result = await signInWithPopup(auth, googleProvider)
       console.log('Popup result:', result);
-      const user = result.user
-      
-      // Remove the fetch from here – move it to useEffect
-      // The onAuthStateChanged will handle it
-      
-      toast.success('Đang xử lý đăng nhập...')  // Temporary success message
+      toast.success('Đăng nhập thành công!')
       return true
     } catch (error) {
       console.error('Error signing in with Google:', error)

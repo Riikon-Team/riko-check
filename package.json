@@ -54,6 +54,7 @@
     "firebase": "^10.7.1",
     "nodemon": "^3.0.2",
     "postcss": "^8.4.32",
+    "qrcode.react": "^3.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",

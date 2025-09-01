@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS events (
     start_at TIMESTAMP WITH TIME ZONE NOT NULL,
     end_at TIMESTAMP WITH TIME ZONE NOT NULL,
     nonce_ttl INTEGER DEFAULT 300,
+    custom_fields JSONB DEFAULT '{}',
+    qr_code TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -35,6 +37,11 @@ CREATE TABLE IF NOT EXISTS attendances (
     ua_hash VARCHAR(255) NOT NULL,
     at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     nonce VARCHAR(255),
+    custom_data JSONB DEFAULT '{}',
+    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    approved_by VARCHAR(255) REFERENCES users(id),
+    approved_at TIMESTAMP WITH TIME ZONE,
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
