@@ -227,7 +227,7 @@ function AttendanceManagement() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium  dark:text-gray-100">
-                            {ouInfo.isStudent && ouInfo.name ? ouInfo.name : (attendance.display_name || attendance.user_display_name || 'Không có tên')}
+                            {attendance.display_name || attendance.user_display_name || 'Không có tên'}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
                             {attendance.email || attendance.user_email || 'Không có email'}

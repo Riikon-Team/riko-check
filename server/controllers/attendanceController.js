@@ -8,6 +8,7 @@ export const attendanceController = {
       const { eventId } = req.params;
       const { userId, customData, email, displayName, publicIp: bodyPublicIp, fingerprint, fingerprintHash } = req.body;
       const clientIp = getClientIp(req);
+      const userAgent = req.headers['user-agent'] || '';
       
       // Lấy public IP từ request body hoặc headers
       const publicIp = bodyPublicIp || req.headers['x-forwarded-for'] || clientIp;
@@ -135,11 +136,11 @@ export const attendanceController = {
         const result = await db.query(
           `INSERT INTO attendances (
             event_id, user_id, email, display_name, ip, public_ip, fingerprint_hash, 
-            nonce, custom_data, status, is_valid
+            nonce, custom_data, status, is_valid, user_agent
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
           [
             eventId, userId, email, displayName, clientIp, publicIp, fingerprintHashForDB,
-            nonce, customData || {}, status, isValid
+            nonce, customData || {}, status, isValid, userAgent
           ]
         );
         
@@ -263,11 +264,11 @@ export const attendanceController = {
         const result = await db.query(
           `INSERT INTO attendances (
             event_id, user_id, email, display_name, ip, public_ip, ua_hash, 
-            nonce, custom_data, status, is_valid
+            nonce, custom_data, status, is_valid, user_agent
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
           [
             eventId, userId, email, displayName, clientIp, publicIp, uaHash,
-            nonce, customData || {}, status, isValid
+            nonce, customData || {}, status, isValid, userAgent 
           ]
         );
         
