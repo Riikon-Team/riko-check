@@ -1,0 +1,131 @@
+import React, { createContext, useContext, useState, useEffect } from 'react'
+import { auth } from '../firebase/config'
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth'
+import toast from 'react-hot-toast'
+
+const AuthContext = createContext()
+
+export function useAuth() {
+  return useContext(AuthContext)
+}
+
+export function AuthProvider({ children }) {
+  const [currentUser, setCurrentUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [userRole, setUserRole] = useState(null)
+  const [isApproved, setIsApproved] = useState(false)
+
+  const googleProvider = new GoogleAuthProvider()
+  googleProvider.addScope('email')
+  googleProvider.addScope('profile')
+  
+  googleProvider.setCustomParameters({
+    prompt: 'select_account'
+  })
+
+  async function signInWithGoogle() {
+    try {
+      console.log('Attempting Google sign-in...');
+      const result = await signInWithPopup(auth, googleProvider)
+      console.log('Popup result:', result);
+      const user = result.user
+      
+      // Remove the fetch from here – move it to useEffect
+      // The onAuthStateChanged will handle it
+      
+      toast.success('Đang xử lý đăng nhập...')  // Temporary success message
+      return true
+    } catch (error) {
+      console.error('Error signing in with Google:', error)
+      if (error.code === 'auth/popup-closed-by-user') {
+        toast.error('Popup đã bị đóng. Vui lòng thử lại.')
+      } else {
+        toast.error('Đăng nhập thất bại!')
+      }
+      return false
+    }
+  }
+
+  async function logout() {
+    try {
+      await signOut(auth)
+      setCurrentUser(null)
+      setUserRole(null)
+      setIsApproved(false)
+      toast.success('Đăng xuất thành công!')
+    } catch (error) {
+      console.error('Error signing out:', error)
+      toast.error('Đăng xuất thất bại!')
+    }
+  }
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user)
+
+        // Lấy Firebase ID token và lưu vào localStorage
+        const token = await user.getIdToken()
+        localStorage.setItem('token', token)
+
+        // Gửi thông tin user lên server (nếu cần)
+        try {
+          const response = await fetch('/api/auth/google', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify({
+              id: user.uid,
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL,
+            }),
+          })
+
+          if (response.ok) {
+            const userData = await response.json()
+            setUserRole(userData.role)
+            setIsApproved(userData.isApproved)
+            toast.success('Đăng nhập thành công!')
+          } else {
+            console.error('Server response error:', response.status)
+            toast.error('Đăng nhập thất bại từ server!')
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error)
+          toast.error('Lỗi kết nối server!')
+        }
+      } else {
+        setCurrentUser(null)
+        setUserRole(null)
+        setIsApproved(false)
+        localStorage.removeItem('token')
+      }
+      setLoading(false)
+    })
+
+    return unsubscribe
+  }, [])
+
+  const value = {
+    currentUser,
+    userRole,
+    isApproved,
+    signInWithGoogle,
+    logout,
+    loading
+  }
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  )
+}
