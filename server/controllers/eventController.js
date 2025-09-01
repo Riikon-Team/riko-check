@@ -43,6 +43,15 @@ export const eventController = {
 
   async createEvent(req, res) {
     try {
+      // Check if user can_create_events is true
+      const userResult = await db.query(
+        'SELECT can_create_events FROM users WHERE id = $1',
+        [req.user.uid]
+      );
+      if (userResult.rows.length === 0 || userResult.rows[0].can_create_events === false) {
+        return res.status(403).json({ message: 'Người dùng không có quyền tạo sự kiện' });
+      }
+      
       const { name, description, types, requiresAuth, ipAllowList, allowedEmailDomains, startAt, endAt, nonceTtl, customFields, isPublic } = req.body;
       const creatorId = req.user.uid;
       
@@ -55,7 +64,7 @@ export const eventController = {
       );
       
       // Tạo QR code sau khi có event ID
-      const qrCode = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/attendance/${result.rows[0].id}`;
+      const qrCode = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/attendance/${result.rows[0].id}`;
       
       // Cập nhật QR code
       await db.query(
@@ -92,6 +101,7 @@ export const eventController = {
       }
       
       const event = eventResult.rows[0];
+      // Kiểm tra quyền: chỉ creator hoặc admin mới được phép
       if (event.creator_id !== userId && req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Không có quyền chỉnh sửa sự kiện này' });
       }
@@ -126,6 +136,7 @@ export const eventController = {
       }
       
       const event = eventResult.rows[0];
+      // Kiểm tra quyền: chỉ creator hoặc admin mới được phép
       if (event.creator_id !== userId && req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Không có quyền xóa sự kiện này' });
       }

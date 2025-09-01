@@ -21,6 +21,13 @@ function AttendanceManagement() {
   const [selectedAttendance, setSelectedAttendance] = useState(null)
   const [actionType, setActionType] = useState('')
   const [actionNotes, setActionNotes] = useState('')
+  
+  // Bulk operations state
+  const [selectedAttendances, setSelectedAttendances] = useState(new Set())
+  const [selectAll, setSelectAll] = useState(false)
+  const [showBulkActionModal, setShowBulkActionModal] = useState(false)
+  const [bulkActionType, setBulkActionType] = useState('')
+  const [bulkActionNotes, setBulkActionNotes] = useState('')
 
   useEffect(() => {
     fetchEvent()
@@ -30,10 +37,21 @@ function AttendanceManagement() {
   const fetchEvent = async () => {
     try {
       const eventData = await eventsAPI.getById(eventId)
-      setEvent(eventData)
+      if (eventData) {
+        setEvent(eventData)
+      } else {
+        toast.error('Không thể tải thông tin sự kiện. Vui lòng đăng nhập lại.')
+        navigate('/dashboard')
+      }
     } catch (error) {
       console.error('Error fetching event:', error)
-      navigate('/dashboard')
+      if (error.message === 'Unauthorized') {
+        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+        navigate('/dashboard')
+      } else {
+        toast.error('Có lỗi xảy ra khi tải thông tin sự kiện')
+        navigate('/dashboard')
+      }
     }
   }
 
@@ -81,6 +99,76 @@ function AttendanceManagement() {
     }
   }
 
+  // Bulk operations functions
+  const handleSelectAll = (checked) => {
+    setSelectAll(checked)
+    if (checked) {
+      const allIds = new Set(filteredAttendances.map(a => a.id))
+      setSelectedAttendances(allIds)
+    } else {
+      setSelectedAttendances(new Set())
+    }
+  }
+
+  const handleSelectAttendance = (attendanceId, checked) => {
+    const newSelected = new Set(selectedAttendances)
+    if (checked) {
+      newSelected.add(attendanceId)
+    } else {
+      newSelected.delete(attendanceId)
+    }
+    setSelectedAttendances(newSelected)
+    
+    // Update select all state
+    if (newSelected.size === filteredAttendances.length) {
+      setSelectAll(true)
+    } else {
+      setSelectAll(false)
+    }
+  }
+
+  const openBulkActionModal = (actionType) => {
+    if (selectedAttendances.size === 0) {
+      toast.error('Vui lòng chọn ít nhất một điểm danh')
+      return
+    }
+    setBulkActionType(actionType)
+    setBulkActionNotes('')
+    setShowBulkActionModal(true)
+  }
+
+  const confirmBulkAction = async () => {
+    if (selectedAttendances.size === 0) return
+
+    try {
+      const selectedIds = Array.from(selectedAttendances)
+      
+      if (bulkActionType === 'delete') {
+        // Delete multiple attendances
+        await Promise.all(selectedIds.map(id => attendanceAPI.delete(id)))
+        toast.success(`Đã xóa ${selectedIds.length} điểm danh thành công!`)
+      } else {
+        // Approve/reject multiple attendances
+        await Promise.all(selectedIds.map(id => 
+          attendanceAPI.approve(id, {
+            status: bulkActionType,
+            notes: bulkActionNotes
+          })
+        ))
+        toast.success(`Đã ${bulkActionType === 'approved' ? 'phê duyệt' : 'từ chối'} ${selectedIds.length} điểm danh!`)
+      }
+      
+      // Reset selection and refresh
+      setSelectedAttendances(new Set())
+      setSelectAll(false)
+      setShowBulkActionModal(false)
+      fetchAttendances()
+    } catch (error) {
+      console.error('Error performing bulk action:', error)
+      toast.error('Có lỗi xảy ra khi thực hiện hành động hàng loạt')
+    }
+  }
+
   const filteredAttendances = filterValid 
     ? attendances.filter(a => a.is_valid)
     : attendances
@@ -119,18 +207,45 @@ function AttendanceManagement() {
           </div>
         </div>
         
-        <div className="flex items-center space-x-3">
-          <select
-            value={filterValid ? 'valid' : 'all'}
-            onChange={(e) => setFilterValid(e.target.value === 'valid')}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800  dark:text-gray-100 text-sm"
-          >
-            <option value="valid">Chỉ hiển thị hợp lệ</option>
-            <option value="all">Hiển thị tất cả</option>
-          </select>
-          
-          <ExportExcel event={event} attendances={attendances} />
-        </div>
+                 <div className="flex items-center space-x-3">
+           <select
+             value={filterValid ? 'valid' : 'all'}
+             onChange={(e) => setFilterValid(e.target.value === 'valid')}
+             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800  dark:text-gray-100 text-sm"
+           >
+             <option value="valid">Chỉ hiển thị hợp lệ</option>
+             <option value="all">Hiển thị tất cả</option>
+           </select>
+           
+           {/* Bulk Actions */}
+           {selectedAttendances.size > 0 && (
+             <div className="flex items-center space-x-2">
+               <span className="text-sm text-gray-600 dark:text-gray-400">
+                 Đã chọn: {selectedAttendances.size}
+               </span>
+               <button
+                 onClick={() => openBulkActionModal('approved')}
+                 className="px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+               >
+                 Duyệt hàng loạt
+               </button>
+               <button
+                 onClick={() => openBulkActionModal('rejected')}
+                 className="px-3 py-2 bg-yellow-600 text-white text-sm rounded-lg hover:bg-yellow-700 transition-colors"
+               >
+                 Từ chối hàng loạt
+               </button>
+               <button
+                 onClick={() => openBulkActionModal('delete')}
+                 className="px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+               >
+                 Xóa hàng loạt
+               </button>
+             </div>
+           )}
+           
+           <ExportExcel event={event} attendances={attendances} />
+         </div>
       </div>
 
       {/* Stats */}
@@ -179,10 +294,31 @@ function AttendanceManagement() {
       </div>
 
       {/* Attendance List */}
-      <div className="card">
-        <h2 className="text-xl font-semibold  dark:text-gray-100 mb-6">
-          Danh sách điểm danh ({filteredAttendances.length})
-        </h2>
+               <div className="card">
+           <div className="flex items-center justify-between mb-6">
+             <h2 className="text-xl font-semibold  dark:text-gray-100">
+               Danh sách điểm danh ({filteredAttendances.length})
+             </h2>
+             
+             {/* Select All Checkbox */}
+             <div className="flex items-center space-x-3">
+               <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                 <input
+                   type="checkbox"
+                   checked={selectAll}
+                   onChange={(e) => handleSelectAll(e.target.checked)}
+                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                 />
+                 <span>Chọn tất cả</span>
+               </label>
+               
+               {selectedAttendances.size > 0 && (
+                 <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                   {selectedAttendances.size} điểm danh đã chọn
+                 </span>
+               )}
+             </div>
+           </div>
         
         {filteredAttendances.length === 0 ? (
           <div className="text-center py-8">
@@ -197,11 +333,19 @@ function AttendanceManagement() {
         ) : (
           <div className="">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Người tham gia
-                  </th>
+                             <thead className="bg-gray-50 dark:bg-gray-700">
+                 <tr>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     <input
+                       type="checkbox"
+                       checked={selectAll}
+                       onChange={(e) => handleSelectAll(e.target.checked)}
+                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                     />
+                   </th>
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                     Người tham gia
+                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     IP
                   </th>
@@ -220,14 +364,25 @@ function AttendanceManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredAttendances.map((attendance) => {
-                  const ouInfo = getOUEmailInfo(attendance.email || attendance.user_email)
-                  return (
-                    <tr key={attendance.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                                 {filteredAttendances.map((attendance) => {
+                   const ouInfo = getOUEmailInfo(attendance.email || attendance.user_email)
+                   const isSelected = selectedAttendances.has(attendance.id)
+                   return (
+                     <tr key={attendance.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                       isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                     }`}>
+                       <td className="px-6 py-4 whitespace-nowrap">
+                         <input
+                           type="checkbox"
+                           checked={isSelected}
+                           onChange={(e) => handleSelectAttendance(attendance.id, e.target.checked)}
+                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                         />
+                       </td>
+                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium  dark:text-gray-100">
-                            {ouInfo.isStudent && ouInfo.name ? ouInfo.name : (attendance.display_name || attendance.user_display_name || 'Không có tên')}
+                            {attendance.display_name || attendance.user_display_name || 'Không có tên'}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
                             {attendance.email || attendance.user_email || 'Không có email'}
@@ -307,8 +462,56 @@ function AttendanceManagement() {
         )}
       </div>
 
-      {/* Action Modal */}
-      {showActionModal && selectedAttendance && (
+             {/* Bulk Action Modal */}
+       {showBulkActionModal && (
+         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+             <div className="mt-3">
+               <h3 className="text-lg font-medium  dark:text-gray-100 mb-4">
+                 {bulkActionType === 'delete' ? 'Xóa hàng loạt' : 
+                  bulkActionType === 'approved' ? 'Phê duyệt hàng loạt' : 'Từ chối hàng loạt'}
+                 <span className="block text-sm text-gray-500 dark:text-gray-400 mt-1">
+                   ({selectedAttendances.size} điểm danh)
+                 </span>
+               </h3>
+               
+               <div className="mb-4">
+                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                   Ghi chú (tùy chọn)
+                 </label>
+                 <textarea
+                   value={bulkActionNotes}
+                   onChange={(e) => setBulkActionNotes(e.target.value)}
+                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700  dark:text-gray-100"
+                   rows="3"
+                   placeholder="Nhập ghi chú..."
+                 />
+               </div>
+
+               <div className="flex justify-end space-x-3">
+                 <button
+                   onClick={() => setShowBulkActionModal(false)}
+                   className="btn-secondary"
+                 >
+                   Hủy
+                 </button>
+                 <button
+                   onClick={confirmBulkAction}
+                   className={`${
+                     bulkActionType === 'delete' ? 'btn-danger' : 'btn-primary'
+                   }`}
+                 >
+                   {bulkActionType === 'delete' ? 'Xóa' : 
+                    bulkActionType === 'approved' ? 'Phê duyệt' : 'Từ chối'}
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Action Modal */}
+       {showActionModal && selectedAttendance && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
             <div className="mt-3">

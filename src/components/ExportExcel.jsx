@@ -41,7 +41,7 @@ function ExportExcel({ event, attendances }) {
   }
 
   const prepareExcelData = (event, attendances) => {
-    const headers = ['STT', 'Tên', 'Email', 'MSSV', 'IP Client', 'IP Public', 'User Agent', 'Thời gian điểm danh', 'Trạng thái', 'Hợp lệ']
+    const headers = ['STT', 'Tên', 'Email', 'MSSV', 'IP Client', 'IP Public', 'User Agent', 'Thời gian điểm danh', 'Trạng thái', 'Hợp lệ', '']
 
     // Thêm các trường tùy chỉnh từ event
     if (event.custom_fields && Array.isArray(event.custom_fields) && event.custom_fields.length > 0) {
@@ -56,7 +56,7 @@ function ExportExcel({ event, attendances }) {
         const ouInfo = getOUEmailInfo(attendance.email || attendance.user_email)
         const row = [
           index + 1,
-          ouInfo.isStudent && ouInfo.name ? ouInfo.name : (attendance.display_name || attendance.user_display_name || 'Không có tên'),
+          attendance.display_name || attendance.user_display_name || 'Không có tên',
           attendance.email || attendance.user_email || 'Không có email',
           ouInfo.isStudent && ouInfo.mssv ? ouInfo.mssv : 'Không có MSSV',
           attendance.ip || 'Không có IP',
