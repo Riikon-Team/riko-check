@@ -2,6 +2,7 @@ import admin from 'firebase-admin';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { decodeFromEnv } from '../decodeServiceAccount.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,8 +10,8 @@ const __dirname = path.dirname(__filename);
 let firebaseConfig = {};
 
 try {
-  const serviceAccountPath = path.join(__dirname, '../serviceAccountKey.json'); 
-  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+  // const serviceAccountPath = path.join(__dirname, '../serviceAccountKey.json'); 
+  const serviceAccount = decodeFromEnv().data;
   firebaseConfig = serviceAccount;
   console.log('Firebase config loaded successfully.');  
 } catch (error) {

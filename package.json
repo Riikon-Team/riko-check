@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "start": "node server/index.js",
     "db:setup": "node server/setup-db.js",
-    "db:reset": "node server/reset-database.js"
+    "db:reset": "node server/reset-database.js",
+    "convert_service_account_key": "node server/convertServiceAccount.js"
   },
   "keywords": [
     "attendance",

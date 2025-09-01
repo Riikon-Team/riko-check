@@ -31,8 +31,8 @@ export const appConfig = {
   }),
 
   rateLimit: rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 100, 
+    windowMs: 15 * 60 * 1000, // 5 phút
+    max: 100, // 50 yêu cầu
     message: 'Quá nhiều yêu cầu từ IP này, vui lòng thử lại sau.'
   }),
 
