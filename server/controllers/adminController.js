@@ -4,7 +4,7 @@ export const adminController = {
   async getAllUsers(req, res) {
     try {
       const result = await db.query(
-        'SELECT id, email, display_name, photo_url, role, is_approved, created_at FROM users ORDER BY created_at DESC'
+        'SELECT id, email, display_name, photo_url, role, can_create_events, created_at FROM users ORDER BY created_at DESC'
       );
       res.json(result.rows);
     } catch (error) {
@@ -17,7 +17,7 @@ export const adminController = {
     try {
       const { id } = req.params;
       const result = await db.query(
-        'UPDATE users SET is_approved = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+        'UPDATE users SET can_create_events = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
         [id]
       );
       
